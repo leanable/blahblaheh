@@ -24,13 +24,32 @@ export default function Home() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Load admin secret from localStorage on mount
+  async function verifySecret(secret: string): Promise<{ ok: boolean; error?: string }> {
+    try {
+      const res = await fetch("/api/auth", {
+        method: "POST",
+        headers: { "x-admin-secret": secret },
+      });
+      if (res.ok) return { ok: true };
+      const data = await res.json().catch(() => ({}));
+      return { ok: false, error: data.error || "Invalid secret" };
+    } catch {
+      return { ok: false, error: "Could not reach server" };
+    }
+  }
+
+  // Restore admin session from localStorage — but re-verify with the server
   useEffect(() => {
     const stored = localStorage.getItem("fs_admin_secret");
-    if (stored) {
-      setAdminSecret(stored);
-      setIsAdmin(true);
-    }
+    if (!stored) return;
+    verifySecret(stored).then((r) => {
+      if (r.ok) {
+        setAdminSecret(stored);
+        setIsAdmin(true);
+      } else {
+        localStorage.removeItem("fs_admin_secret");
+      }
+    });
   }, []);
 
   function showToast(msg: string, type: "ok" | "err" = "ok") {
@@ -55,10 +74,15 @@ export default function Home() {
     fetchFiles();
   }, [fetchFiles]);
 
-  function handleSecretSubmit(e: React.FormEvent) {
+  async function handleSecretSubmit(e: React.FormEvent) {
     e.preventDefault();
     const val = secretInput.trim();
     if (!val) return;
+    const result = await verifySecret(val);
+    if (!result.ok) {
+      showToast(result.error || "Invalid secret", "err");
+      return;
+    }
     localStorage.setItem("fs_admin_secret", val);
     setAdminSecret(val);
     setIsAdmin(true);
@@ -277,7 +301,10 @@ export default function Home() {
               const isDeleting = deletingUrl === file.url;
               return (
                 <div key={file.url} className={`${styles.fileCard} ${isDeleting ? styles.deleting : ""}`}>
-                  <div className={styles.fileIcon}>{iconFor(name)}</div>
+                  <div className={styles.fileIcon}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={iconFor(name)} alt="" width={44} height={44} draggable={false} />
+                  </div>
                   <div className={styles.fileInfo}>
                     <p className={styles.fileName} title={name}>{name}</p>
                     <p className={styles.fileMeta}>
