@@ -1,19 +1,23 @@
 import { put } from "@vercel/blob";
 import { NextRequest, NextResponse } from "next/server";
+import { checkAdmin } from "@/lib/auth";
 
 const MAX_FILE_SIZE = parseInt(process.env.MAX_FILE_SIZE || "") || 50 * 1024 * 1024; // 50 MB default
-const ADMIN_SECRET = process.env.ADMIN_SECRET || "";
 
 export const runtime = "edge";
 
 export async function POST(req: NextRequest) {
   // Auth check
-  const secret = req.headers.get("x-admin-secret");
-  if (ADMIN_SECRET && secret !== ADMIN_SECRET) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const auth = checkAdmin(req);
+  if (!auth.ok) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
 
-  const filename = req.headers.get("x-filename");
+  const rawFilename = req.headers.get("x-filename");
+  let filename = rawFilename || "";
+  try {
+    filename = decodeURIComponent(filename); // client sends it URI-encoded
+  } catch {}
   if (!filename) {
     return NextResponse.json({ error: "Missing x-filename header" }, { status: 400 });
   }
