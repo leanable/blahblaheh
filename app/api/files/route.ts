@@ -13,7 +13,6 @@ export async function GET() {
       pathname: blob.pathname,
       size: blob.size,
       uploadedAt: blob.uploadedAt,
-      contentType: blob.contentType,
     }));
 
     // Sort newest first
