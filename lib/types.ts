@@ -4,5 +4,4 @@ export interface BlobFile {
   pathname: string;
   size: number;
   uploadedAt: string;
-  contentType?: string;
 }
