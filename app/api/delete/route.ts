@@ -1,15 +1,15 @@
+
 import { del } from "@vercel/blob";
 import { NextRequest, NextResponse } from "next/server";
-
-const ADMIN_SECRET = process.env.ADMIN_SECRET || "";
+import { checkAdmin } from "@/lib/auth";
 
 export const runtime = "edge";
 
 export async function DELETE(req: NextRequest) {
   // Auth check
-  const secret = req.headers.get("x-admin-secret");
-  if (ADMIN_SECRET && secret !== ADMIN_SECRET) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const auth = checkAdmin(req);
+  if (!auth.ok) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
 
   const { url } = await req.json();
