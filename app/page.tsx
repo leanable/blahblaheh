@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { BlobFile } from "@/lib/types";
 import { fmtSize, fmtDate, iconFor, nameFromPathname } from "@/lib/utils";
+import { APP_VERSION } from "@/lib/version";
 import styles from "./page.module.css";
 
 const MAX_BYTES = 50 * 1024 * 1024; // 50 MB
@@ -30,9 +31,10 @@ export default function Home() {
         method: "POST",
         headers: { "x-admin-secret": secret },
       });
-      if (res.ok) return { ok: true };
       const data = await res.json().catch(() => ({}));
-      return { ok: false, error: data.error || "Invalid secret" };
+      // Only accept an explicit {ok:true} from the server — never trust status alone
+      if (res.ok && data.ok === true) return { ok: true };
+      return { ok: false, error: data.error || "Wrong password" };
     } catch {
       return { ok: false, error: "Could not reach server" };
     }
@@ -55,7 +57,7 @@ export default function Home() {
   function showToast(msg: string, type: "ok" | "err" = "ok") {
     setToast({ msg, type });
     if (toastTimer.current) clearTimeout(toastTimer.current);
-    toastTimer.current = setTimeout(() => setToast(null), 2800);
+    toastTimer.current = setTimeout(() => setToast(null), 4000);
   }
 
   const fetchFiles = useCallback(async () => {
@@ -339,6 +341,10 @@ export default function Home() {
           </div>
         )}
       </main>
+
+      <p style={{ textAlign: "center", fontSize: 11, opacity: 0.4, padding: "16px 0 32px" }}>
+        {APP_VERSION}
+      </p>
 
       {/* Toast */}
       {toast && (
